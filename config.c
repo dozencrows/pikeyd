@@ -108,7 +108,7 @@ int init_config(void)
   FILE *fp;
   char ln[MAX_LN];
   int lnno = 0;
-  char name[32], xname[32], keya[32], keyb[32];
+  char name[32], xname[32], keya[32], keyb[32], rotHalf[5];
   char conffile[80];
   int gpio,caddr,regno,gpio2;
 
@@ -148,7 +148,7 @@ int init_config(void)
 	    }
 	  }
           else if(strstr(ln, "ROT") == ln){
-            n=sscanf(ln, "%s %d %d %s %s", name, &gpio, &gpio2, &keya, &keyb);
+            n=sscanf(ln, "%s %d %d %s %s %s", name, &gpio, &gpio2, &keya, &keyb, &rotHalf);
             if (n == 5) {
               ka = find_key(keya);
               kb = find_key(keyb);
