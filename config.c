@@ -20,7 +20,7 @@
    You should have received a copy of the GNU Lesser General Public
    License along with the GNU C Library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
-   02111-1307 USA.  
+   02111-1307 USA.
 */
 
 #include <stdio.h>
@@ -86,7 +86,7 @@ static int xio_count = 0;
 static gpio_rotary_s *gpio_rotary[NUM_GPIO];
 static gpio_rotary_s *last_gpio_rotary = NULL;
 static int last_gpio_rotary_idx = NUM_GPIO;
- 
+
 static int SP;
 static keyinfo_s KI;
 
@@ -499,15 +499,15 @@ static void setup_xio(int xio)
 
   switch(xio_dev[xio].type){
   case IO_MCP23008:
-    write_iic(addr, 0, cfg_dat, 7); 
+    write_iic(addr, 0, cfg_dat, 7);
     printf("Configuring MCP23008\n");
     break;
   case IO_MCP23017A:
-    write_iic(addr, 0, cfg_dat, 7); 
+    write_iic(addr, 0, cfg_dat, 7);
     printf("Configuring MCP23017 port A\n");
     break;
   case IO_MCP23017B:
-    write_iic(addr, 0x10, cfg_dat, 7); 
+    write_iic(addr, 0x10, cfg_dat, 7);
     printf("Configuring MCP23017 port B\n");
     break;
   default:
@@ -639,25 +639,49 @@ int got_more_rotaries(void)
   return last_gpio_rotary_idx < NUM_GPIO;
 }
 
-#define R_START 	0x0
-#define R_CW_FINAL	0x1
-#define R_CW_BEGIN 	0x2
-#define R_CW_NEXT 	0x3
+#define R_START 0x0
+#define DIR_CW          0x10
+#define DIR_CCW         0x20
+
+
+#define R_CCW_BEGIN_H 0x1
+#define R_CW_BEGIN 0x2
+#define R_START_M 0x3
+#define R_CW_BEGIN_M 0x4
+#define R_CCW_BEGIN_M 0x5
+
+const unsigned char half_rotary_states[6][4] = {
+  // R_START (00)
+{R_START_M,            R_CW_BEGIN,     R_CCW_BEGIN_H,  R_START},
+// R_CCW_BEGIN_H
+{R_START_M | DIR_CCW, R_START,        R_CCW_BEGIN_H,  R_START},
+// R_CW_BEGIN
+{R_START_M | DIR_CW,  R_CW_BEGIN,     R_START,      R_START},
+// R_START_M (11)
+{R_START_M,            R_CCW_BEGIN_M,  R_CW_BEGIN_M, R_START},
+// R_CW_BEGIN_M
+{R_START_M,            R_START_M,      R_CW_BEGIN_M, R_START | DIR_CW},
+// R_CCW_BEGIN_M
+{R_START_M,            R_CCW_BEGIN_M,  R_START_M,    R_START | DIR_CCW},
+};
+
+#define R_CW_FINAL      0x1
+#define R_CW_BEGIN      0x2
+#define R_CW_NEXT       0x3
 #define R_CCW_BEGIN 0x4
 #define R_CCW_FINAL 0x5
-#define R_CCW_NEXT 	0x6
-#define DIR_CW		0x10
-#define DIR_CCW		0x20
+#define R_CCW_NEXT      0x6
 
 const unsigned char rotary_states[7][4] = {
-  {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},			// R_START
-  {R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | DIR_CW}, // R_CW_FINAL
-  {R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},			// R_CW_BEGIN
-  {R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},			// R_CW_NEXT
-  {R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},			// R_CCW_BEGIN
-  {R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | DIR_CCW},// R_CCW_FINAL
-  {R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},			// R_CCW_NEXT
+{R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},                      // R_START
+{R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | DIR_CW}, // R_CW_FINAL
+{R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},                      // R_CW_BEGIN
+{R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},                      // R_CW_NEXT
+{R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},                      // R_CCW_BEGIN
+{R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | DIR_CCW},// R_CCW_FINAL
+{R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},                      // R_CCW_NEXT
 };
+
 
 static int update_rotary_keys_sm(int gpio_state, gpio_rotary_s* rotary_ctrl)
 {
@@ -665,7 +689,7 @@ static int update_rotary_keys_sm(int gpio_state, gpio_rotary_s* rotary_ctrl)
 	  int bit_b = (gpio_state & rotary_ctrl->gpio_b_mask) ? 1 : 0;
 	  int encoder_bits = bit_a | bit_b << 1;
 
-	  rotary_ctrl->last_state = rotary_states[rotary_ctrl->last_state & 0xf][encoder_bits];
+	  rotary_ctrl->last_state = half_rotary_states[rotary_ctrl->last_state & 0xf][encoder_bits];
 
 	  switch(rotary_ctrl->last_state & 0x30)
 	  {
@@ -688,4 +712,3 @@ int get_next_rotary_key(int gpio_state)
   advance_rotary();
   return k;
 }
-
