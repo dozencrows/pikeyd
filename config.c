@@ -54,6 +54,7 @@ typedef struct _gpio_rotary{
   int gpio_b_mask;
   int last_state;
   int direction;
+  int rotHalf;
   struct _gpio_rotary *next;
 }gpio_rotary_s;
 
@@ -71,7 +72,7 @@ typedef struct{
 
 static int find_key(const char *name);
 static void add_event(gpio_key_s **ev, int gpio, int key, int xio);
-static void add_rotary(gpio_rotary_s **rot, int gpio_a, int gpio_b, int key_a, int key_b);
+static void add_rotary(gpio_rotary_s **rot, int gpio_a, int gpio_b, int key_a, int key_b, int rotHalf);
 static gpio_key_s *get_event(gpio_key_s *ev, int idx);
 static int find_xio(const char *name);
 static void setup_xio(int xio);
@@ -108,9 +109,9 @@ int init_config(void)
   FILE *fp;
   char ln[MAX_LN];
   int lnno = 0;
-  char name[32], xname[32], keya[32], keyb[32], rotHalf[5];
+  char name[32], xname[32], keya[32], keyb[32];
   char conffile[80];
-  int gpio,caddr,regno,gpio2;
+  int gpio,caddr,regno,gpio2,rotHalf;
 
   for(i=0;i<NUM_GPIO;i++){
     gpio_key[i] = NULL;
@@ -148,8 +149,8 @@ int init_config(void)
 	    }
 	  }
           else if(strstr(ln, "ROT") == ln){
-            n=sscanf(ln, "%s %d %d %s %s %s", name, &gpio, &gpio2, &keya, &keyb, &rotHalf);
-            if (n == 5) {
+            n=sscanf(ln, "%s %d %d %s %s %d", name, &gpio, &gpio2, &keya, &keyb, &rotHalf);
+            if (n == 6) {
               ka = find_key(keya);
               kb = find_key(keyb);
               if (ka && kb && key_names[ka].code < 0x300 && key_names[kb].code < 0x300) {
@@ -158,8 +159,12 @@ int init_config(void)
                   gpio = gpio2;
                   gpio2 = temp;
                 }
+
+                rotHalf = (rotHalf > 0) ? 1 : 0;
+                printf("HALF = %d\n",rotHalf);
+
                 //printf("%d ROT = %d/%d %04x:[%s] %04x:[%s]\n", lnno, gpio, gpio2, ka, keya, kb, keyb);
-                add_rotary(&gpio_rotary[gpio], gpio, gpio2, key_names[ka].code, key_names[kb].code);
+                add_rotary(&gpio_rotary[gpio], gpio, gpio2, key_names[ka].code, key_names[kb].code,rotHalf);
               }
               else {
                 printf("Line %d: unknown key(s) for rotary encoder: %s, %s\n", lnno, keya, keyb);
@@ -325,11 +330,11 @@ static void add_event(gpio_key_s **ev, int gpio, int key, int xio)
   }
 }
 
-static void add_rotary(gpio_rotary_s **rot, int gpio_a, int gpio_b, int key_a, int key_b)
+static void add_rotary(gpio_rotary_s **rot, int gpio_a, int gpio_b, int key_a, int key_b, int rotHalf)
 {
   if(*rot){
     /* Recursive call to add the next link in the list */
-    add_rotary(&(*rot)->next, gpio_a, gpio_b, key_a, key_b);
+    add_rotary(&(*rot)->next, gpio_a, gpio_b, key_a, key_b, rotHalf);
   }
   else{
     *rot = malloc(sizeof(gpio_rotary_s));
@@ -346,6 +351,7 @@ static void add_rotary(gpio_rotary_s **rot, int gpio_a, int gpio_b, int key_a, i
       (*rot)->next = NULL;
       (*rot)->last_state = 0;
       (*rot)->direction = 0;
+      (*rot)->rotHalf = rotHalf;
     }
   }
 }
@@ -689,7 +695,11 @@ static int update_rotary_keys_sm(int gpio_state, gpio_rotary_s* rotary_ctrl)
 	  int bit_b = (gpio_state & rotary_ctrl->gpio_b_mask) ? 1 : 0;
 	  int encoder_bits = bit_a | bit_b << 1;
 
-	  rotary_ctrl->last_state = half_rotary_states[rotary_ctrl->last_state & 0xf][encoder_bits];
+          if(rotary_ctrl->rotHalf == 1) {
+	    rotary_ctrl->last_state = half_rotary_states[rotary_ctrl->last_state & 0xf][encoder_bits];
+          } else {
+            rotary_ctrl->last_state = rotary_states[rotary_ctrl->last_state & 0xf][encoder_bits];
+          }
 
 	  switch(rotary_ctrl->last_state & 0x30)
 	  {
