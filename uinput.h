@@ -26,7 +26,7 @@
 #ifndef _UINPUT_H_
 #define _UINPUT_H_
 
-int init_uinput(void);
+int init_uinput(bool skip_mouse_init);
 void test_uinput(void);
 int close_uinput(void);
 int send_gpio_keys(int gpio, int value);

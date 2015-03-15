@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "joy_RPi.h"
 #include "iic.h"
 
@@ -34,6 +35,7 @@ static void showVersion(void);
 int main(int argc, char *argv[])
 {
   int en_daemonize = 0;
+  bool skip_mouse_init = false;
   int i;
 
   for(i=1; i<argc; i++){
@@ -53,6 +55,9 @@ int main(int argc, char *argv[])
     }
     if(!strcmp(argv[i], "-pd")){
       joy_pulldown();
+    }
+    if(!strcmp(argv[i], "-smi")){
+      skip_mouse_init = true;
     }
     if(!strcmp(argv[i], "-v")){
       showVersion();
@@ -77,7 +82,7 @@ int main(int argc, char *argv[])
 
   //printf("init uinput\n");
 
-  if(init_uinput() == 0){
+  if(init_uinput(skip_mouse_init) == 0){
     sleep(1);
     //test_uinput();
     if(joy_RPi_init()>=0){
@@ -109,6 +114,7 @@ static void showHelp(void)
   printf("  -k    try to terminate running daemon\n");
   printf("  -pu   set internal pull-up resistors\n");
   printf("  -pd   set internal pull-down resistors\n");
+  printf("  -smi  skip mouse initialisation, so no mouse device is created\n");
   printf("  -v    version\n");
   printf("  -h    this help\n");
 }
