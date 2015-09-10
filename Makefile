@@ -37,8 +37,6 @@ clean:
 
 install: release
 	install -D $(TARGET) $(BINDIR)/$(TARGET)
-	-cp my-pikeyd.conf /etc/pikeyd.conf
-	-cp pikeyd.conf /etc/pikeyd.conf.example
 
 uninstall:
 	-rm $(BINDIR)/$(TARGET)
