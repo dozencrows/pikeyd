@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -50,7 +51,7 @@ static pthread_mutex_t	send_key_lock = PTHREAD_MUTEX_INITIALIZER;
         return(EXIT_FAILURE); \
     } while(0)
 
-int init_uinput(void)
+int init_uinput(bool skip_mouse_init)
 {
   int fd;
   struct uinput_user_dev uidev;
@@ -64,16 +65,17 @@ int init_uinput(void)
     die("error: ioctl");
   if(ioctl(fd, UI_SET_EVBIT, EV_REP) < 0)
     die("error: ioctl");
-  if(ioctl(fd, UI_SET_KEYBIT, BTN_LEFT) < 0)
-    die("error: ioctl");
-
-  if(ioctl(fd, UI_SET_EVBIT, EV_REL) < 0)
-    die("error: ioctl");
-  if(ioctl(fd, UI_SET_RELBIT, REL_X) < 0)
-    die("error: ioctl");
-  if(ioctl(fd, UI_SET_RELBIT, REL_Y) < 0)
-    die("error: ioctl");
-
+  if( skip_mouse_init == false) {
+    if(ioctl(fd, UI_SET_KEYBIT, BTN_LEFT) < 0)
+      die("error: ioctl");
+  
+    if(ioctl(fd, UI_SET_EVBIT, EV_REL) < 0)
+      die("error: ioctl");
+    if(ioctl(fd, UI_SET_RELBIT, REL_X) < 0)
+      die("error: ioctl");
+    if(ioctl(fd, UI_SET_RELBIT, REL_Y) < 0)
+      die("error: ioctl");
+  }
   /* don't forget to add all the keys! */
   for(i=0; i<256; i++){
     if(ioctl(fd, UI_SET_KEYBIT, i) < 0)
