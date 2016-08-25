@@ -1,7 +1,9 @@
 TARGET:=pikeyd
+PREFIX = $(DESTDIR)/usr/local
+BINDIR = $(PREFIX)/bin
 
 #comment out the line below when _NOT_ cross compiling
-include crosscomp.rules
+#include crosscomp.rules
 
 ifneq ($(CROSS), yes)
 CC := gcc
@@ -33,3 +35,10 @@ clean:
 	rm -f $(TARGET) *.o *~
 
 
+install: release
+	install -D $(TARGET) $(BINDIR)/$(TARGET)
+
+uninstall:
+	-rm $(BINDIR)/$(TARGET)
+
+release: $(TARGET)

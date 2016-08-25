@@ -108,7 +108,11 @@
 
 #if defined RPI_JOYSTICK
 
+#if defined RPI1
 #define GPIO_PERI_BASE        0x20000000
+#else
+#define GPIO_PERI_BASE        0x3F000000
+#endif
 #define GPIO_BASE             (GPIO_PERI_BASE + 0x200000)
 #define BLOCK_SIZE            (4 * 1024)
 #define PAGE_SIZE             (4 * 1024)
